@@ -16,7 +16,16 @@
       --text-muted: #94a3b8;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      /* Запрет выделения текста на всей странице */
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -54,6 +63,9 @@
       border-radius: 10px; border: 1px solid var(--card-border);
       background: rgba(255, 255, 255, 0.05); color: var(--text-main);
       font-size: 1.05rem; outline: none; transition: 0.2s;
+      /* Разрешаем ввод текста в самом поле */
+      -webkit-user-select: text;
+      user-select: text;
     }
     .name-input:focus { border-color: var(--accent-cyan); background: rgba(255, 255, 255, 0.1); }
     
@@ -96,7 +108,7 @@
     .send-status { margin-top: 15px; font-size: 0.95rem; padding: 10px; border-radius: 8px; }
   </style>
 </head>
-<body>
+<body oncontextmenu="return false;" oncopy="return false;" ondragstart="return false;">
 
   <div class="container">
     <header>
@@ -108,9 +120,9 @@
       
       <!-- 1. Стартовый экран -->
       <div id="start-screen" style="text-align: center; padding: 10px 0;">
-        <h3 style="font-size: 1.4rem; margin-bottom: 10px;">⚡ Итоговый тест по географии</h3>
-        <p style="color: var(--text-muted); margin-bottom: 10px;">Введите ваше имя и фамилию.</p>
-        <p style="color: #ef4444; font-size: 0.9rem; margin-bottom: 20px;">Внимание: на каждый вопрос даётся ровно 15 секунд!</p>
+        <h3 style="font-size: 1.4rem; margin-bottom: 10px;">⚡ Экспресс-контроль по географии</h3>
+        <p style="color: var(--text-muted); margin-bottom: 10px;">Введите ваше имя и фамилию для получения варианта.</p>
+        <p style="color: #ef4444; font-size: 0.9rem; margin-bottom: 20px;">Внимание: вопросы перемешаны случайным образом, на каждый даётся 15 секунд!</p>
         <input type="text" id="student-name" class="name-input" placeholder="Например: Иванов Иван" autocomplete="off">
         <br>
         <button class="quiz-btn" onclick="startQuiz()">Начать тест ⏱️</button>
@@ -136,10 +148,11 @@
   </div>
 
   <script>
-    // ЗДЕСЬ НУЖНО БУДЕТ ВСТАВИТЬ ВАШУ ССЫЛКУ ИЗ ШАГА 2
+    // Ваша подтвержденная ссылка Formspree
     const formspreeLink = "https://formspree.io/f/xyeewanz";
 
-    const questions = [
+    // База вопросов
+    const rawQuestions = [
       { q: "Какое озеро является крупнейшим по площади бессточным водоёмом на Земле?", options: ["Озеро Байкал", "Каспийское море", "Озеро Виктория", "Аральское море"], correct: 1, explanation: "Каспийское море классифицируется как крупнейшее замкнутое бессточное озеро планеты." },
       { q: "Какое государство полностью окружено территорией Южно-Африканской Республики (анклав)?", options: ["Лесото", "Ботсвана", "Намибия", "Зимбабве"], correct: 0, explanation: "Королевство Лесото — классический пример государства-анклава внутри ЮАР." },
       { q: "Какой пролив разделяет Евразию и Северную Америку?", options: ["Гибралтарский", "Дрейка", "Берингов", "Магелланов"], correct: 2, explanation: "Берингов пролив разделяет Чукотский полуостров (Россия) и Аляску (США)." },
@@ -152,12 +165,45 @@
       { q: "Какая горная вершина является высочайшей точкой Казахстана?", options: ["Белуха", "Хан-Тенгри", "Пик Талгар", "Пик Комсомола"], correct: 1, explanation: "Высота пика Хан-Тенгри (Тянь-Шань) составляет 6995 м." }
     ];
 
+    let activeQuestions = [];
     let currentQuestionIndex = 0, score = 0, studentName = "", timerInterval, timeLeft = 15;
+
+    // Алгоритм случайного перемешивания массива
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // Подготовка перемешанных вопросов и ответов
+    function prepareQuestions() {
+      // 1. Перемешиваем сами вопросы
+      const shuffledQuestions = shuffle(rawQuestions);
+
+      // 2. Внутри каждого вопроса перемешиваем варианты ответов
+      return shuffledQuestions.map(item => {
+        const correctAnswerText = item.options[item.correct];
+        const shuffledOptions = shuffle(item.options);
+        return {
+          q: item.q,
+          options: shuffledOptions,
+          correct: shuffledOptions.indexOf(correctAnswerText),
+          explanation: item.explanation
+        };
+      });
+    }
 
     function startQuiz() {
       const nameInput = document.getElementById('student-name').value.trim();
       if (!nameInput) { alert("Пожалуйста, введите ваше имя и фамилию!"); return; }
       studentName = nameInput;
+
+      // Генерируем уникальный вариант вопросов для этого ученика
+      activeQuestions = prepareQuestions();
+
       document.getElementById('start-screen').style.display = 'none';
       document.getElementById('quiz-container').style.display = 'block';
       currentQuestionIndex = 0; score = 0;
@@ -165,10 +211,10 @@
     }
 
     function renderQuestion() {
-      const qData = questions[currentQuestionIndex];
-      document.getElementById('question-number').textContent = `Вопрос ${currentQuestionIndex + 1} из ${questions.length}`;
+      const qData = activeQuestions[currentQuestionIndex];
+      document.getElementById('question-number').textContent = `Вопрос ${currentQuestionIndex + 1} из ${activeQuestions.length}`;
       document.getElementById('score-counter').textContent = `Счёт: ${score}`;
-      document.getElementById('progress-bar').style.width = `${((currentQuestionIndex + 1) / questions.length) * 100}%`;
+      document.getElementById('progress-bar').style.width = `${((currentQuestionIndex + 1) / activeQuestions.length) * 100}%`;
       document.getElementById('quiz-question').textContent = qData.q;
       
       const optionsContainer = document.getElementById('quiz-options');
@@ -202,12 +248,12 @@
 
     function autoSkipQuestion() {
       currentQuestionIndex++;
-      currentQuestionIndex < questions.length ? renderQuestion() : showResults();
+      currentQuestionIndex < activeQuestions.length ? renderQuestion() : showResults();
     }
 
     function selectOption(button, selectedIndex) {
       clearInterval(timerInterval);
-      const qData = questions[currentQuestionIndex];
+      const qData = activeQuestions[currentQuestionIndex];
       const buttons = document.querySelectorAll('.quiz-option');
       const status = document.getElementById('quiz-status');
       const nextBtn = document.getElementById('next-btn');
@@ -226,13 +272,13 @@
         status.style.background = "rgba(239, 68, 68, 0.1)"; status.style.border = "1px solid rgba(239, 68, 68, 0.3)"; status.style.color = "#fca5a5";
       }
 
-      nextBtn.textContent = currentQuestionIndex < questions.length - 1 ? "Следующий вопрос →" : "Завершить викторину 🏁";
+      nextBtn.textContent = currentQuestionIndex < activeQuestions.length - 1 ? "Следующий вопрос →" : "Завершить викторину 🏁";
       nextBtn.style.display = 'inline-block';
     }
 
     function nextQuestion() {
       currentQuestionIndex++;
-      currentQuestionIndex < questions.length ? renderQuestion() : showResults();
+      currentQuestionIndex < activeQuestions.length ? renderQuestion() : showResults();
     }
 
     function showResults() {
@@ -246,7 +292,7 @@
       resultBox.innerHTML = `
         <h4>Тест завершён!</h4>
         <p style="color: #fff; font-size: 1.2rem; margin-bottom: 5px;">Ученик: <b>${studentName}</b></p>
-        <p>Итоговый результат: <b>${score} из ${questions.length}</b></p>
+        <p>Итоговый результат: <b>${score} из ${activeQuestions.length}</b></p>
         <p style="color: var(--accent-cyan); font-weight: 500; margin-bottom: 10px;">${message}</p>
         
         <div id="send-status" class="send-status" style="background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3);">
@@ -260,23 +306,17 @@
 
     function sendResultToEmail() {
       const statusDiv = document.getElementById('send-status');
-      
-      if (formspreeLink === "ВСТАВЬТЕ_ССЫЛКУ_СЮДА") {
-        statusDiv.innerHTML = "⚠️ <i>Отправка отключена (нужно вставить ссылку Formspree в код)</i>";
-        statusDiv.style.background = "transparent"; statusDiv.style.border = "none";
-        return;
-      }
 
       fetch(formspreeLink, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ "Ученик": studentName, "Оценка": `${score} из 10`, "Предмет": "География" })
+        body: JSON.stringify({ "Ученик": studentName, "Оценка": `${score} из ${activeQuestions.length}`, "Предмет": "География" })
       })
       .then(res => {
         if (res.ok) {
           statusDiv.innerHTML = "✅ Результаты успешно отправлены учителю!";
           statusDiv.style.background = "rgba(34, 197, 94, 0.1)"; statusDiv.style.color = "#86efac"; statusDiv.style.border = "1px solid rgba(34, 197, 94, 0.3)";
-        } else { throw new Error('Network response was not ok'); }
+        } else { throw new Error('Network error'); }
       })
       .catch(err => {
         statusDiv.innerHTML = "❌ Ошибка при отправке результатов.";
