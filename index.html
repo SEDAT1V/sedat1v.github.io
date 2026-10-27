@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Портфолио педагога | География</title>
 
-  <!-- Стили Leaflet для интерактивной карты -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
   <style>
     :root {
       --bg-dark: #090d16;
@@ -103,28 +100,51 @@
       color: var(--accent-cyan);
     }
 
-    /* Карта */
-    #map {
-      height: 380px;
-      width: 100%;
-      border-radius: 12px;
-      margin-top: 15px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+    /* Прогресс-бар викторины */
+    .quiz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
     }
 
-    /* Викторина */
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 10%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-indigo));
+      transition: width 0.3s ease;
+    }
+
+    #quiz-question {
+      font-size: 1.15rem;
+      margin-bottom: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+
     .quiz-option {
       display: block;
       width: 100%;
       text-align: left;
-      padding: 12px 18px;
+      padding: 14px 18px;
       margin: 10px 0;
       background: rgba(255, 255, 255, 0.04);
       color: var(--text-main);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 10px;
       cursor: pointer;
-      font-size: 0.95rem;
+      font-size: 1rem;
       transition: all 0.2s ease;
     }
 
@@ -135,25 +155,60 @@
     }
 
     .correct {
-      background: rgba(34, 197, 94, 0.15) !important;
+      background: rgba(34, 197, 94, 0.2) !important;
       border-color: #22c55e !important;
       color: #86efac !important;
       font-weight: 600;
     }
 
     .wrong {
-      background: rgba(239, 68, 68, 0.15) !important;
+      background: rgba(239, 68, 68, 0.2) !important;
       border-color: #ef4444 !important;
       color: #fca5a5 !important;
       font-weight: 600;
     }
 
     #quiz-status {
-      margin-top: 14px;
+      margin-top: 16px;
       font-size: 0.95rem;
-      padding: 10px 14px;
+      padding: 12px 16px;
       border-radius: 8px;
       display: none;
+    }
+
+    .quiz-btn-next {
+      margin-top: 18px;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo));
+      color: #090d16;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .quiz-btn-next:hover {
+      opacity: 0.9;
+    }
+
+    .result-box {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .result-box h4 {
+      font-size: 1.6rem;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    .result-box p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      margin-bottom: 20px;
     }
   </style>
 </head>
@@ -174,22 +229,28 @@
       </ul>
     </div>
 
+    <!-- Интерактивная викторина на 10 вопросов -->
     <div class="card">
-      <h3>🗺️ Интерактивная карта исследований</h3>
-      <p style="color: var(--text-muted);">Пример применения геоинформационных веб-слоёв для наглядной демонстрации объектов:</p>
-      <div id="map"></div>
-    </div>
+      <h3>⚡ Географический практикум: 10 вопросов</h3>
+      
+      <div id="quiz-container">
+        <div class="quiz-header">
+          <span id="question-number">Вопрос 1 из 10</span>
+          <span id="score-counter">Счёт: 0</span>
+        </div>
 
-    <div class="card">
-      <h3>⚡ Экспресс-викторина для урока</h3>
-      <p style="margin-bottom: 12px;"><b>Вопрос:</b> Какое озеро является крупнейшим бессточным водоёмом на Земле?</p>
-      <div id="quiz-options">
-        <button class="quiz-option" onclick="checkAnswer(this, false)">Озеро Байкал</button>
-        <button class="quiz-option" onclick="checkAnswer(this, true)">Каспийское море</button>
-        <button class="quiz-option" onclick="checkAnswer(this, false)">Озеро Виктория</button>
-        <button class="quiz-option" onclick="checkAnswer(this, false)">Аральское море</button>
+        <div class="progress-bar-container">
+          <div id="progress-bar" class="progress-bar-fill"></div>
+        </div>
+
+        <div id="quiz-question"></div>
+        <div id="quiz-options"></div>
+        <div id="quiz-status"></div>
+        
+        <button id="next-btn" class="quiz-btn-next" onclick="nextQuestion()">Следующий вопрос →</button>
       </div>
-      <div id="quiz-status"></div>
+
+      <div id="quiz-result" class="result-box" style="display: none;"></div>
     </div>
 
     <div class="card">
@@ -198,43 +259,172 @@
     </div>
   </div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Инициализация карты
-    const map = L.map('map').setView([51.1694, 71.4491], 11);
+    const questions = [
+      {
+        q: "Какое озеро является крупнейшим по площади бессточным водоёмом на Земле?",
+        options: ["Озеро Байкал", "Каспийское море", "Озеро Виктория", "Аральское море"],
+        correct: 1,
+        explanation: "Каспийское море классифицируется как крупнейшее замкнутое бессточное озеро планеты."
+      },
+      {
+        q: "Какое государство полностью окружено территорией Южно-Африканской Республики (анклав)?",
+        options: ["Лесото", "Ботсвана", "Намибия", "Зимбабве"],
+        correct: 0,
+        explanation: "Королевство Лесото — классический пример государства-анклава внутри ЮАР."
+      },
+      {
+        q: "Какой пролив разделяет Евразию и Северную Америку?",
+        options: ["Гибралтарский", "Дрейка", "Берингов", "Магелланов"],
+        correct: 2,
+        explanation: "Берингов пролив разделяет Чукотский полуостров (Россия) и Аляску (США)."
+      },
+      {
+        q: "Какая река считается самой полноводной в мире?",
+        options: ["Нил", "Амазонка", "Янцзы", "Конго"],
+        correct: 1,
+        explanation: "Амазонка несет около 20% мирового речного стока в океан."
+      },
+      {
+        q: "Какая страна является лидером в мире по запасам и добыче природного урана?",
+        options: ["Канада", "Австралия", "Казахстан", "Нигер"],
+        correct: 2,
+        explanation: "Казахстан обеспечивает свыше 40% мировой первичной добычи урана."
+      },
+      {
+        q: "Как называется самая глубокая впадина Мирового океана?",
+        options: ["Марианский жёлоб", "Зондский жёлоб", "Пуэрто-Рико", "Яванская впадина"],
+        correct: 0,
+        explanation: "Глубина Марианского жёлоба (Бездна Челленджера) составляет около 11 000 метров."
+      },
+      {
+        q: "Какая пустыня является самой засушливой на Земле?",
+        options: ["Сахара", "Атакама", "Калахари", "Гоби"],
+        correct: 1,
+        explanation: "Атакама в Южной Америке считается самым засушливым неполярным регионом мира."
+      },
+      {
+        q: "Через какую из перечисленных стран проходит нулевой меридиан (Гринвич)?",
+        options: ["Испания", "Германия", "Италия", "Швеция"],
+        correct: 0,
+        explanation: "Нулевой меридиан пересекает Великобританию, Францию, Испанию и несколько стран Африки."
+      },
+      {
+        q: "Какой остров является самым большим по площади на планете?",
+        options: ["Мадагаскар", "Калимантан", "Гренландия", "Новая Гвинея"],
+        correct: 2,
+        explanation: "Гренландия — крупнейший остров планеты с площадью более 2,1 млн км²."
+      },
+      {
+        q: "Какая горная вершина является высочайшей точкой Казахстана?",
+        options: ["Белуха", "Хан-Тенгри", "Пик Талгар", "Пик Комсомола"],
+        correct: 1,
+        explanation: "Высота пика Хан-Тенгри (Тянь-Шань) составляет 6995 м (с ледовым куполом — 7010 м)."
+      }
+    ];
 
-    // Подложка карты в стильном тёмном оформлении (CartoDB Dark Matter)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap, © CARTO'
-    }).addTo(map);
+    let currentQuestionIndex = 0;
+    let score = 0;
 
-    const marker = L.marker([51.1283, 71.4305]).addTo(map);
-    marker.bindPopup("<b>Байтерек</b><br>Географический центр левобережья.").openPopup();
-
-    // Викторина
-    function checkAnswer(button, isCorrect) {
+    function renderQuestion() {
+      const qData = questions[currentQuestionIndex];
+      document.getElementById('question-number').textContent = `Вопрос ${currentQuestionIndex + 1} из ${questions.length}`;
+      document.getElementById('score-counter').textContent = `Счёт: ${score}`;
+      document.getElementById('progress-bar').style.width = `${((currentQuestionIndex + 1) / questions.length) * 100}%`;
+      
+      document.getElementById('quiz-question').textContent = qData.q;
+      
+      const optionsContainer = document.getElementById('quiz-options');
+      optionsContainer.innerHTML = '';
+      
       const status = document.getElementById('quiz-status');
+      status.style.display = 'none';
+      document.getElementById('next-btn').style.display = 'none';
+
+      qData.options.forEach((optText, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-option';
+        btn.textContent = optText;
+        btn.onclick = () => selectOption(btn, index);
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    function selectOption(button, selectedIndex) {
+      const qData = questions[currentQuestionIndex];
       const buttons = document.querySelectorAll('.quiz-option');
+      const status = document.getElementById('quiz-status');
+      const nextBtn = document.getElementById('next-btn');
 
       buttons.forEach(btn => btn.disabled = true);
-      status.style.display = "block";
+      status.style.display = 'block';
 
-      if (isCorrect) {
+      if (selectedIndex === qData.correct) {
         button.classList.add('correct');
-        status.innerHTML = "✅ <b>Верно!</b> Каспийское море классифицируется как крупнейшее бессточное озеро планеты.";
+        score++;
+        document.getElementById('score-counter').textContent = `Счёт: ${score}`;
+        status.innerHTML = `✅ <b>Верно!</b> ${qData.explanation}`;
         status.style.background = "rgba(34, 197, 94, 0.1)";
         status.style.border = "1px solid rgba(34, 197, 94, 0.3)";
         status.style.color = "#86efac";
       } else {
         button.classList.add('wrong');
-        status.innerHTML = "❌ <b>Неверно.</b> Правильный ответ — Каспийское море.";
+        buttons[qData.correct].classList.add('correct');
+        status.innerHTML = `❌ <b>Неверно.</b> ${qData.explanation}`;
         status.style.background = "rgba(239, 68, 68, 0.1)";
         status.style.border = "1px solid rgba(239, 68, 68, 0.3)";
         status.style.color = "#fca5a5";
       }
+
+      if (currentQuestionIndex < questions.length - 1) {
+        nextBtn.textContent = "Следующий вопрос →";
+      } else {
+        nextBtn.textContent = "Завершить викторину 🏁";
+      }
+      nextBtn.style.display = 'inline-block';
     }
+
+    function nextQuestion() {
+      currentQuestionIndex++;
+      if (currentQuestionIndex < questions.length) {
+        renderQuestion();
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      document.getElementById('quiz-container').style.display = 'none';
+      const resultBox = document.getElementById('quiz-result');
+      resultBox.style.display = 'block';
+
+      let message = "";
+      if (score === 10) {
+        message = "Отличный результат! 100% правильных ответов.";
+      } else if (score >= 7) {
+        message = "Хороший уровень знаний по географии.";
+      } else {
+        message = "Есть повод повторить номенклатуру и карту мира.";
+      }
+
+      resultBox.innerHTML = `
+        <h4>Тест завершён!</h4>
+        <p>Ваш результат: <b>${score} из ${questions.length}</b></p>
+        <p style="color: var(--accent-cyan); font-weight: 500;">${message}</p>
+        <button class="quiz-btn-next" style="display: inline-block; margin-top: 10px;" onclick="restartQuiz()">Пройти ещё раз</button>
+      `;
+    }
+
+    function restartQuiz() {
+      currentQuestionIndex = 0;
+      score = 0;
+      document.getElementById('quiz-result').style.display = 'none';
+      document.getElementById('quiz-container').style.display = 'block';
+      renderQuestion();
+    }
+
+    // Старт викторины при загрузке страницы
+    renderQuestion();
   </script>
 
 </body>
